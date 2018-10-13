@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+    xsi:schemaLocation="http://www.springframework.org/schema/beans
+    http://www.springframework.org/schema/beans/spring-beans.xsd
+    http://www.springframework.org/schema/context
+    http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <bean id="configReader" class="net.devaction.avengerbot.config.ConfigReader"/>    
+    
+    <bean id="decryptedKeyPairProvider" class="net.devaction.avengerbot.config.twitterkey.DecryptedKeyPairProviderImpl">
+        <property name="encryptedKeyPairProvider" ref="configReader"/>
+    </bean> 
+
+    <bean id="decryptedTokenPairProvider" class="net.devaction.avengerbot.config.twittertoken.DecryptedTokenPairProviderImpl">
+        <property name="encryptedAccessTokenPairProvider" ref="configReader"/>
+    </bean> 
+    
+    <bean id="queue" class="net.devaction.avengerbot.tweetscapturedproducer.TweetsQueueImpl"/>  
+    
+    <bean id="listener" class="net.devaction.avengerbot.tweetscapturedproducer.StatusStreamListener">
+        <property name="queue" ref="queue"/>
+    </bean>
+    
+    <bean id="tweetsProducer" class="net.devaction.avengerbot.tweetscapturedproducer.TweetsProducerImpl">
+        <property name="decryptedKeyPairProvider" ref= "decryptedKeyPairProvider"/>
+        <property name="decryptedTokenPairProvider" ref="decryptedTokenPairProvider"/> 
+        <property name="keywordsProvider" ref="configReader"/>
+        <property name="userIdToFollowProvider" ref="configReader"/>
+        <property name="listener" ref="listener"/>        
+    </bean>
+
+    <bean id="twitterProvider" class="net.devaction.avengerbot.twitter.TwitterProvider">
+        <property name="decryptedKeyPairProvider" ref= "decryptedKeyPairProvider"/>
+        <property name="decryptedTokenPairProvider" ref="decryptedTokenPairProvider"/>
+    </bean>
+    
+    <bean id="tweetProvider" class="net.devaction.avengerbot.tweetstobesentprovider.TweetProviderImpl">
+        <property name="tweetListProvider" ref="configReader"/>
+    </bean>    
+
+    <bean id="tweetProcessor" class="net.devaction.avengerbot.twitter.TweetProcessorImpl">
+        <property name="twitterProvider" ref="twitterProvider"/>
+        <property name="tweetProvider" ref="tweetProvider"/>
+        <property name="geolocationProvider" ref="configReader"/>
+        <property name="ourUserIdProvider" ref="configReader"/>
+    </bean>
+    
+    <bean id="tweetsConsumer" class="net.devaction.avengerbot.tweetscapturedconsumer.TweetsConsumerImpl">
+        <property name="queue" ref="queue"/>
+        <property name="processor" ref="tweetProcessor"/>
+    </bean>
+    
+    <bean id="manager" class="net.devaction.avengerbot.main.Manager">
+        <property name="tweetsProducer" ref="tweetsProducer"/>
+        <property name="tweetsConsumer" ref="tweetsConsumer"/>
+    </bean>  
+</beans>
+
